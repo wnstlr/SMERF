@@ -14,9 +14,9 @@ Refer to these repositories for further instructions on how they are used.
 
 ## Run
 
-First create subdirectories required for saving data and results.
+First create subdirectories required for saving intermediary data and results.
 
-```mkdir data outputs outputs/cache outputs/plots```
+```mkdir outputs outputs/cache outputs/plots```
 
 `data` directory is used to save `.npz` files for the generated datasets.
 `outputs/cache` directory is used to store all intermediary/final outputs from SMERF, e.g. trained models, saliency outputs, evalauted metric values, etc.
