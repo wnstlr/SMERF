@@ -4,7 +4,6 @@ import keras.backend as K
 import numpy as np
 from smerf.models import *
 
-
 # Uses SHAP library to obtain feature attributions
 def shap_run(model, x_sample, y_sample, x_train, exp_no):
     ## NOTE due to complications in keras and TF versions (this code works in TF1, NOT TF2), 
@@ -18,9 +17,9 @@ def shap_run(model, x_sample, y_sample, x_train, exp_no):
         sess.run(tf.global_variables_initializer())
         # redefine the model
         if exp_no >= 3.5 or exp_no==1.2:
-            model_obj = TextColorCNN_adv(lr=0.0001, max_epoch=10)
+            model_obj = TextBoxCNN_adv(lr=0.0001, max_epoch=10)
         else:
-            model_obj = TextColorCNN(lr=0.0001, max_epoch=10)
+            model_obj = TextBoxCNN(lr=0.0001, max_epoch=10)
         model_obj.model.load_weights('/tmp/model.pt')
         model_sess = model_obj.model
         # DeepSHAP

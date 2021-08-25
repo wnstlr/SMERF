@@ -36,7 +36,7 @@ class EarlyStoppingByLossVal(keras.callbacks.Callback):
         if current > 7.00:
             self.model.stop_training = True
 
-class TextColorCNN:
+class TextBoxCNN:
     def __init__(self, lr=0.0001, batch=128, max_epoch=10, interm_dim=200, input_shape=(64, 64, 3), model_name='w.pt', output_dir='../outputs'):
         self.input_shape = input_shape
         self.model = keras.Sequential([
@@ -66,6 +66,10 @@ class TextColorCNN:
             cb = []
         if os.path.exists(self.modelfile) and not retrain:
             self.model.load_weights(self.modelfile)
+        elif os.path.exists(self.modelfile) and retrain:
+            raise ValueError('Set retrain=False')
+        elif not os.path.exists(self.modelfile) and retrain:
+            raise ValueError('modelfile not found')
         else:
             y_train_oh = to_categorical(y_train, 2)
             if validate:
@@ -82,7 +86,7 @@ class TextColorCNN:
         print('Accuracy=%f'%score)
         return score
 
-class TextColorCNN_adv(TextColorCNN):
+class TextBoxCNN_adv(TextBoxCNN):
     def __init__(self, lr=0.0001, batch=128, max_epoch=10, interm_dim=200, input_shape=(64, 64, 3), model_name='w.pt', output_dir='../outputs'):
         self.input_shape = input_shape
         self.model = keras.Sequential([

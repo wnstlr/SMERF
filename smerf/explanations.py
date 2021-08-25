@@ -62,7 +62,7 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
             methods_name = os.path.join(directory, f_name+'_methods.pkl')
             text_name = os.path.join(directory, f_name+'_text.pkl')
         print('cache not found')
-        ## NOTE this is using the innvestigate library for tensorflow.
+        ## NOTE setting up the methods below is using the iNNvestigate library for tensorflow.
         ## The results for other methods should be added manually via separately defined helper functions at the end.
         noise_scale = 0.1
         input_range = (0,1)

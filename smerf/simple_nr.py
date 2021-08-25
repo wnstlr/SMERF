@@ -1,9 +1,9 @@
-from .textcolor_data import *
+from .textbox_data import *
 from .eval import *
 import matplotlib.pyplot as plt
 
 ### EXP2.11 No Reliance (simple)
-def spurious_textcolor_data(n=3000, save=True, save_dir='data', exp_no=2.11):
+def generate_textbox_data(n=3000, save=True, save_dir='data', exp_no=2.11):
     # sets of features to be corrleated: switch feature (binary), patch feature (binary), text (binary)
     def create_data(switch, patch, text, n=n):
         # create images under specific conitions
@@ -82,39 +82,22 @@ def spurious_textcolor_data(n=3000, save=True, save_dir='data', exp_no=2.11):
         bboxes = np.concatenate(bboxes, axis=0)
         bboxes_avoid = np.concatenate(bboxes_avoid, axis=0)
         bboxes_avoid2 = np.concatenate(bboxes_avoid2, axis=0)
-        return TextColorDataset(X, y), bboxes, bboxes_avoid, bboxes_avoid2
-
+        return TextBoxDataset(X, y), bboxes, bboxes_avoid, bboxes_avoid2
+    
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
-
-    fname = os.path.join(save_dir, 'textcolor_corr%0.2f.npz'%exp_no)
-    if os.path.exists(fname):
+    
+    fname = os.path.join(save_dir, 'textbox_%0.2f.npz'%exp_no) 
+    if os.path.exists(fname): # if the file exists, load
         print("Loading from cached data")
-        tmp = np.load(open(fname, 'rb'), allow_pickle=True)
-        train_data = TextColorDataset(tmp['x_train'], tmp['y_train'])
-        test_data = TextColorDataset(tmp['x_test'], tmp['y_test'])
-        train_coord = tmp['train_coord']
-        test_coord = tmp['test_coord']
-        train_avoid = tmp['train_avoid']
-        test_avoid = tmp['test_avoid']
-        train_avoid2 = tmp['train_avoid2']
-        test_avoid2 = tmp['test_avoid2']
-    else:
-        print("Generating from scratch")
+        train_data, test_data, train_primary, train_secondary, test_primary, test_secondary = \
+            load_data(exp_no, save_dir)
+    else: # otherwise create the new dataset from scratch
+        print('Generating data from scratch')
         train_data, train_coord, train_avoid, train_avoid2 = create_dataset(n=n)
         test_data, test_coord, test_avoid, test_avoid2 = create_dataset(n=500)
-
-    if save and not os.path.exists(fname):
-        np.savez(open(fname, 'wb'),
-                 x_train=train_data.X, 
-                 y_train=train_data.y, 
-                 x_test=test_data.X, 
-                 y_test=test_data.y, 
-                 train_coord=train_coord, 
-                 test_coord=test_coord,
-                 train_avoid=train_avoid,
-                 test_avoid=test_avoid,
-                 train_avoid2=train_avoid2,
-                 test_avoid2=test_avoid2)
-
-    return train_data, test_data, train_coord, test_coord, train_avoid, test_avoid, train_avoid2, test_avoid2
+        train_data, test_data, train_primary, train_secondary, test_primary, test_secondary = \
+            save_data(exp_no, save_dir, train_data, test_data, train_coord, train_avoid, \
+                      train_avoid2, test_coord, test_avoid, test_avoid2, save=save) 
+        
+    return train_data, test_data, train_primary, test_primary, train_secondary, test_secondary

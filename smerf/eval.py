@@ -7,7 +7,7 @@ import os, pickle
 from matplotlib.backends.backend_pdf import PdfPages   
 textcolorutils = imp.load_source('textcolor_utils', '../smerf/textcolor_utils.py')
 
-### TextColor Data Evaluations ###
+### TextBox Data Evaluations ###
 
 def get_binary_masks(bbox, shape):
     mask = np.zeros(shape)
@@ -15,7 +15,7 @@ def get_binary_masks(bbox, shape):
     return mask
 
 # Define a method to compute AFL
-def get_weighted_iou(sal, bbox_lst, methods, method_idx):
+def get_afl(sal, bbox_lst, methods, method_idx):
     if methods[method_idx][2] == textcolorutils.heatmap:
         pp = 1 - np.mean(sal, axis=2)
     else:
@@ -26,7 +26,6 @@ def get_weighted_iou(sal, bbox_lst, methods, method_idx):
     
     no_objs = len(bbox_lst)
     score_vals = []
-    #print(bbox_lst, no_objs)
     if no_objs == 0: # if there is no object, return invalid value
         return -1
     for i in range(no_objs):
@@ -38,7 +37,7 @@ def get_weighted_iou(sal, bbox_lst, methods, method_idx):
     return sum(score_vals)
 
 # Define a method to compute MAFL
-def get_weighted_avg_iou(sal, bbox_lst, methods, method_idx):
+def get_mafl(sal, bbox_lst, methods, method_idx):
     if methods[method_idx][2] == textcolorutils.heatmap:
         pp = 1 - np.mean(sal, axis=2)
     else:
@@ -49,7 +48,6 @@ def get_weighted_avg_iou(sal, bbox_lst, methods, method_idx):
     
     no_objs = len(bbox_lst)
     score_vals = []
-    #print(bbox_lst, no_objs)
     if no_objs == 0: # if there is no object, return invalid value
         return -1
     for i in range(no_objs):
@@ -90,12 +88,12 @@ def process_bucket(bucket_result, bbox_gt_lst, bbox_avoid_lst, methods, iou_type
     for i in range(no_images):
         for j in range(1,no_methods):
             if iou_type == 'weighted': # AFL
-                piou = get_weighted_iou(bucket_result[i,j], bbox_gt_lst[i], methods, j)
-                siou = get_weighted_iou(bucket_result[i,j], bbox_avoid_lst[i], methods, j)
+                piou = get_afl(bucket_result[i,j], bbox_gt_lst[i], methods, j)
+                siou = get_afl(bucket_result[i,j], bbox_avoid_lst[i], methods, j)
 
             elif iou_type == 'avg-weighted': # MAFL
-                piou = get_weighted_avg_iou(bucket_result[i,j], bbox_gt_lst[i], methods, j)
-                siou = get_weighted_avg_iou(bucket_result[i,j], bbox_avoid_lst[i], methods, j)
+                piou = get_mafl(bucket_result[i,j], bbox_gt_lst[i], methods, j)
+                siou = get_mafl(bucket_result[i,j], bbox_avoid_lst[i], methods, j)
                 
             elif iou_type == 'plain': # plain-IOU
                 pixel_no = get_pixel_no(bbox_gt_lst[i])
@@ -146,7 +144,6 @@ def compute_valid_stats(arr):
     return out
 
 # get the bbox_lst set up (for one gt)
-# NOTE: this is only for cases with single INCLUDE and at most 2 AVOID
 def setup_bboxes(test_coords, test_avoid, test_avoid2, idx, gt_flag=[1,0,0]):
     inputs = [test_coords[idx], test_avoid[idx], test_avoid2[idx]]
     include = []
@@ -187,13 +184,12 @@ def post_process_saliency(sal, img_idx, method_idx, methods, pixel_nos, enforce=
     :return: post-processed saliency output, binarized (H, W) array, for metric computation
     """
     if methods[method_idx][2] == textcolorutils.heatmap:
-    #if method_idx >= 5 and method_idx <=14: #heatmaps NOTE: indices here are hard-coded
         pp = 1 - np.mean(sal, axis=2)
     else:
         pp = np.max(sal, axis=2)
         #pp = sal.sum(-1)
     if enforce is not None:
-    # NOTE for CR case, need to consider exceptional cases (where the switch region should be manually reset to zero )
+    # for CR case, need to consider exceptional cases (where the switch region should be manually reset to zero )
         for ee in enforce:
             if None in ee:
                 pass

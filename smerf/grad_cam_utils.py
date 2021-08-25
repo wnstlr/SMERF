@@ -11,8 +11,8 @@ import keras
 import cv2
 import os
 
-from .models import TextColorCNN as TextColorCNN
-from .models import TextColorCNN_adv as TextColorCNN_adv
+from .models import TextBoxCNN as TextBoxCNN
+from .models import TextBoxCNN_adv as TextBoxCNN_adv
 
 def register_gradient():
     if "GuidedBackProp" not in ops._gradient_registry._registry:
@@ -47,9 +47,9 @@ def modify_backprop(model, name, model_file, exp_no):
 
         # re-instanciate a new model
         if exp_no >= 3.5 or exp_no == 1.2:
-            new_model = TextColorCNN_adv().model
+            new_model = TextBoxCNN_adv().model
         else:
-            new_model = TextColorCNN().model
+            new_model = TextBoxCNN().model
         new_model.load_weights(model_file)
         #new_model = VGG16(weights='imagenet')
     return new_model

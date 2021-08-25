@@ -5,14 +5,18 @@ import sys
 sys.path.append('../')
 import smerf
 from smerf.models import *
-from smerf.textcolor_data import *
+from smerf.textbox_data import *
 from smerf.eval import *
 import smerf.explanations as saliency
 
+DATA_DIR = '../data'
+
 CACHE_DIR = '../outputs/cache'
+#CACHE_DIR = '../outputs/test' 
 if not os.path.exists(CACHE_DIR):
     os.mkdir(CACHE_DIR)
     
+#PLOT_DIR = '../outputs/test'
 PLOT_DIR = '../outputs/plots'
 if not os.path.exists(PLOT_DIR):
     os.mkdir(PLOT_DIR)
@@ -29,7 +33,7 @@ def main(args):
     ### Below defines the hyperparameters for each experiment setups. 
     ### For new experiments, these should be stated explicitly. 
     if exp_no == 1.11: ## Simple-FR: moving patch (white)
-        import smerf.simple_fr as textcolor_exp
+        import smerf.simple_fr as textbox_exp
         no_data = 2000
         no_test_per_split = 500
         no_split = 12
@@ -49,8 +53,7 @@ def main(args):
         assert(no_split == count)
 
     elif exp_no == 2.11: ## Simple-NR: patch and switch (moving) (white text, black background)
-        #import smerf.textcolor_nr_complex2 as textcolor_exp
-        import smerf.simple_nr as textcolor_exp
+        import smerf.simple_nr as textbox_exp
         no_data = 5000
         no_test_per_split = 500
         no_split = 8
@@ -70,7 +73,7 @@ def main(args):
         assert(no_split==count)
 
     elif exp_no == 1.2: ## Complex-FR: complex (two ground-truth objects)
-        import smerf.complex_fr as textcolor_exp
+        import smerf.complex_fr as textbox_exp
         no_data = 2000
         no_test_per_split = 500
         no_split = 12
@@ -90,7 +93,7 @@ def main(args):
         assert(no_split == count)
         
     elif exp_no == 3.71: # Complex-CR1
-        import smerf.complex_cr1 as textcolor_exp
+        import smerf.complex_cr1 as textbox_exp
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
@@ -111,7 +114,7 @@ def main(args):
         assert(no_split == count)
 
     elif exp_no == 3.72: # Complex-CR2
-        import smerf.complex_cr2 as textcolor_exp
+        import smerf.complex_cr2 as textbox_exp
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
@@ -132,7 +135,7 @@ def main(args):
         assert(no_split == count)
 
     elif exp_no == 3.73: # Complex-CR3
-        import smerf.complex_cr3 as textcolor_exp
+        import smerf.complex_cr3 as textbox_exp
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
@@ -153,7 +156,7 @@ def main(args):
         assert(no_split == count)
 
     elif exp_no == 3.74: # Complex-CR4
-        import smerf.complex_cr4 as textcolor_exp
+        import smerf.complex_cr4 as textbox_exp
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
@@ -176,17 +179,9 @@ def main(args):
     # NOTE more experiments should be added below
     else:
         raise ValueError('exp_no %f not defined'%exp_no)
-
-    ### Create datasets
-    if exp_no >= 3.5:
-        train_data, test_data, train_coord, test_coord, train_avoid, test_avoid, train_enforce, test_enforce = \
-            textcolor_exp.spurious_textcolor_data(n=no_data, 
-                                                  save=True, 
-                                                  save_dir='../data', 
-                                                  exp_no=exp_no) 
-    else:
-        train_data, test_data, train_coord, test_coord, train_avoid, test_avoid, train_enforce, test_enforce = \
-            textcolor_exp.spurious_textcolor_data(n=no_data, 
+            
+    train_data, test_data, train_primary, test_primary, train_secondary, test_secondary = \
+                textbox_exp.generate_textbox_data(n=no_data, 
                                                   save=True, 
                                                   save_dir='../data', 
                                                   exp_no=exp_no)
@@ -210,7 +205,7 @@ def main(args):
             else:
                 retrain = True
             if exp_no >= 3.5 or exp_no == 1.2:
-                model_obj = TextColorCNN_adv(lr=ll, 
+                model_obj = TextBoxCNN_adv(lr=ll, 
                                         model_name=model_name, 
                                         max_epoch=epoch, 
                                         output_dir=CACHE_DIR)
@@ -219,7 +214,7 @@ def main(args):
                 else:
                     thr = 0.99
             else:
-                model_obj = TextColorCNN(lr=ll, 
+                model_obj = TextBoxCNN(lr=ll, 
                                         model_name=model_name, 
                                         max_epoch=epoch, 
                                         output_dir=CACHE_DIR)
@@ -245,12 +240,12 @@ def main(args):
     idx = []
     text = []
     for i in range(no_split):
-        ######### HACK: uncomment to run the whole thing at once
+        ######### HACK: comment this portion to run everything on a single run. Currently, doing so is slower than aborting the process and rerunning. 
         exit_after = False
         existing_instance = os.path.exists(os.path.join(CACHE_DIR, 'result_%0.2f_%d.pkl'%(exp_no, i)))
         if not existing_instance:
             exit_after = True
-        #########
+        ################################################################
         print(split_names[i])
         i_start = i * no_test_per_split
         i_end = i_start + no_test_per_split
@@ -264,10 +259,10 @@ def main(args):
                                  exp_no=exp_no, 
                                  load=True, 
                                  split=i)
-        ########### HACK: uncomment this to run the whole thing at once (slow due to memory issues)
+        ########### HACK: comment this portion to run the whole thing at once. 
         if exit_after:
             assert(False)
-        ###########
+        ################################################################
         _idx = _idx + i_start
         result.append(_result)
         idx.append(_idx)
@@ -280,7 +275,7 @@ def main(args):
     methods = _methods
     text = np.array(text)
     text = np.concatenate(text, axis=0)
-    print(result.shape, idx.shape)
+    #print(result.shape, idx.shape)
 
     result_name = os.path.join(CACHE_DIR, 'result_%0.2f.pkl'%exp_no)
     idx_name = os.path.join(CACHE_DIR, 'idx_%0.2f.pkl'%exp_no)
@@ -291,19 +286,19 @@ def main(args):
     pickle.dump(methods, open(methods_name, 'wb'))
     pickle.dump(text, open(text_name, 'wb'))
 
-    print('computing evaluation metrics...')
+    print('Computing evaluation metrics...')
 
     iou_name = os.path.join(CACHE_DIR, 'iou_all_%0.2f.pkl'%exp_no)
     iou_name_single = os.path.join(CACHE_DIR, 'iou_single_all_%0.2f.pkl'%exp_no)
     wiou_name = os.path.join(CACHE_DIR, 'weighted_iou_all_%0.2f.pkl'%exp_no)
     avg_wiou_name = os.path.join(CACHE_DIR, 'avg_weighted_iou_all_%0.2f.pkl'%exp_no)
-
-    if exp_no >= 3.5:
-        bbox_gt_lst, bbox_avoid_lst = setup_bboxes(test_coord, test_avoid, test_enforce, idx, gt_flag=[1,0,1])
-    elif exp_no == 1.2: # complex_fr: multiple GT
-        bbox_gt_lst, bbox_avoid_lst = setup_bboxes(test_coord, test_avoid, test_enforce, idx, gt_flag=[1,0,1])
-    else:
-        bbox_gt_lst, bbox_avoid_lst = setup_bboxes(test_coord, test_avoid, test_enforce, idx, gt_flag=[1,0,0])
+    
+    # load info from the saved bbox list
+    print('-- loading bounding box info..')
+    bbox_gt_lst = test_primary[idx]
+    bbox_avoid_lst = test_secondary[idx]
+    
+    print('-- processing images from buckets...')
     plain_raw = process_all_bucket(result, bbox_gt_lst, bbox_avoid_lst, no_split, methods, iou_type='plain')
     pickle.dump(plain_raw, open(iou_name, 'wb'))
     plain_single_raw = process_all_bucket(result, bbox_gt_lst, bbox_avoid_lst, no_split, methods, iou_type='plain_single')
@@ -316,64 +311,70 @@ def main(args):
     plain_single_ious = compute_valid_stats(plain_single_raw)
     weighted_ious = compute_valid_stats(weighted_raw)
     avg_weighted_ious = compute_valid_stats(weighted_raw_avg)
-
+    
+    # AFL
     m_piou, s_piou = weighted_ious[0]
     m_siou, s_siou = weighted_ious[1]
     np.save(open(os.path.join(CACHE_DIR, 'metrics_weighted_%0.2f.npy'%exp_no), 'wb'), \
         [m_piou, s_piou, m_siou, s_siou])
-
+    
+    # IOU
     m_piou_plain_single, s_piou_plain_single = plain_single_ious[0]
     m_siou_plain_single, s_siou_plain_single = plain_single_ious[1]
     np.save(open(os.path.join(CACHE_DIR, 'metrics_plain_single_%0.2f.npy'%exp_no), 'wb'), \
         [m_piou_plain_single, s_piou_plain_single, m_siou_plain_single, s_siou_plain_single])
-
+    
+    # IOU multi-thresholded
     m_piou_plain, s_piou_plain = plain_ious[0]
     m_siou_plain, s_siou_plain = plain_ious[1]
     np.save(open(os.path.join(CACHE_DIR, 'metrics_plain_%0.2f.npy'%exp_no), 'wb'), \
         [m_piou_plain, s_piou_plain, m_siou_plain, s_siou_plain])
 
+    # MAFL
     m_avg_piou, s_avg_piou = avg_weighted_ious[0]
     m_avg_siou, s_avg_siou = avg_weighted_ious[1]
     np.save(open(os.path.join(CACHE_DIR, 'metrics_avg_weighted_%0.2f.npy'%exp_no), 'wb'), \
         [m_avg_piou, s_avg_piou, m_avg_siou, s_avg_siou])
+    
+    print('==> All metrics computed for all buckets.')
 
-    print('plotting...')
+    print('Plotting...')
     #Plot IOU overall
-    print(' - IOU')
+    print('-- PIOU - multithresholding')
     plot_iou(methods, m_piou_plain, s_piou_plain, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou'%exp_no))
-    print(' - IOU-Avoid')
+    print('-- SIOU - multithresholding')
     plot_iou(methods, m_siou_plain, s_siou_plain, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_avoid'%exp_no))
 
-    print(' - IOU')
+    print('-- PIOU - singlethresholding')
     plot_iou(methods, m_piou_plain_single, s_piou_plain_single, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_single'%exp_no))
-    print(' - IOU-Avoid')
+    print('-- SIOU - singlethresholding')
     plot_iou(methods, m_siou_plain_single, s_siou_plain_single, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_avoid_single'%exp_no))
 
-    print(' - wIOU')
+    print('-- PAFL')
     plot_iou(methods, m_piou, s_piou, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_weighted'%exp_no))
-    print(' - wIOU-Avoid')
+    print('-- SAFL')
     plot_iou(methods, m_siou, s_siou, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_avoid_weighted'%exp_no))
 
-    print(' - avg wIOU')
+    print('-- PMAFL')
     plot_iou(methods, m_avg_piou, s_avg_piou, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_avg_weighted'%exp_no))
-    print(' - avg wIOU-Avoid')
+    print('-- SMAFL')
     plot_iou(methods, m_avg_siou, s_avg_siou, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_avoid_avg_weighted'%exp_no))
 
-    # Plot samples per group
-    print(' - samples')
-    for i in range(no_split):
-        print(split_names[i])
-        i_start = i * no_sample_per_block
-        i_end = i_start + 10
-        fname = os.path.join(PLOT_DIR, 'samples_%0.2f_%d'%(exp_no, i))
-        smerf.eval.visualize_examples(result[i_start:i_end], 
-                                      methods, 
-                                      text[i_start:i_end], 
-                                      idx[i_start:i_end], 
-                                      fname=fname)
+    # Plot samples per bucket
+    # print('-- Samples per bucekt')
+    # for i in range(no_split):
+    #     print(split_names[i])
+    #     i_start = i * no_sample_per_block
+    #     i_end = i_start + 10
+    #     fname = os.path.join(PLOT_DIR, 'samples_%0.2f_%d'%(exp_no, i))
+    #     smerf.eval.visualize_examples(result[i_start:i_end], 
+    #                                   methods, 
+    #                                   text[i_start:i_end], 
+    #                                   idx[i_start:i_end], 
+    #                                   fname=fname)
 
     # Plot across different groups with different feature
-    print(' - different groups')
+    print('-- Per Bucket Information')
     eval_per_bucket(weighted_raw, 
                     no_split, 
                     methods, 
