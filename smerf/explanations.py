@@ -10,14 +10,24 @@ import pickle
 import os
 from tqdm import tqdm
 
-# helper functions for different saliency methods (specify them separately when adding them)
+# NOTE Helper functions for saliency methods that are not supported by iNNvestigate libary
+#      We recommend specifying these methods on a separate file to avoid clutter.
 from .grad_cam_utils import *
 from .shap_utils import *
 
 def softmax(x):
     return np.exp(x) / np.sum(np.exp(x), axis=1)[:, None]
 
-def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=True, f_name=None, directory='../outputs/cache', split=None):
+def run_methods(model, 
+                x_data, 
+                y_data, 
+                x_train, 
+                no_images=10, 
+                exp_no=0, 
+                load=True, 
+                f_name=None, 
+                directory='../outputs/cache', 
+                split=None):
     """
     Given a trained model, run saliency methods and return the results.
 
@@ -28,7 +38,7 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
     :param exp_no: experiment number for reference
     :param load: if True, load from a cached results
     :param directory: directory to save or load the results
-    :param split: if not None, specifies the subgroup index the methods are run on 
+    :param split: if not None, specifies the bucket index the methods are run on 
 
     :return (result, method, text, idx) tuple where result is (no_images, M, H, C, W) saliency output 
     for M methods and no_images images; method is the list of configs for the saliency methods; 
@@ -62,10 +72,11 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
             methods_name = os.path.join(directory, f_name+'_methods.pkl')
             text_name = os.path.join(directory, f_name+'_text.pkl')
         print('cache not found')
-        ## NOTE setting up the methods below is using the iNNvestigate library for tensorflow.
-        ## The results for other methods should be added manually via separately defined helper functions at the end.
         noise_scale = 0.1
         input_range = (0,1)
+        
+        ## NOTE Methods defined here is using the iNNvestigate library.
+        ##      Other methods should be added manually via separately defined helper functions at the end.
         methods = [
             # NAME                    OPT.PARAMS                POSTPROC FXN                TITLE
             # Show input.
@@ -112,11 +123,9 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
         color_conversion = None
         channels_first = keras.backend.image_data_format() == "channels_first"
 
-        #s = tf.Session()
         # random set of images to test
         np.random.seed(1)
         idx = np.random.choice(len(x_data), no_images, replace=False) # index of the test data selected
-        #images = [(x_data[i], y_data[i]) for i in idx]
 
         images = x_data[idx]
         labels = y_data[idx]
@@ -143,7 +152,6 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
         # Predict final activations, probabilites, and label.
         presm = model.predict(images)
         prob = softmax(presm)
-        #prob = s.run(K.softmax(presm))
         y_hat = prob.argmax(axis=1)
 
         for i, y in enumerate(labels):
@@ -154,7 +162,8 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
                         "%s" % label_to_class_name[y_hat[i]] # predicted label
                         ))
 
-        ### Add additional baseline methods to run
+        ####### NOTE Add additional methods to run below (those that are not supported 
+        #######      in the iNNvestigate library)
 
         # Add Grad-CAM
         print(' Running Grad-CAM')
@@ -177,8 +186,9 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
             ed = (ed - np.min(ed)) / (np.max(ed) - np.min(ed))
             edge_results[i,0] = ed
         methods.append(('edge', {}, textcolorutils.heatmap, "Edge-detection"))
-
         result = np.concatenate((result, random_results, edge_results), axis=1)
+        
+        ###### Adding new methods should be completed above ######
 
         if not loaded:
             # Save results
@@ -187,28 +197,56 @@ def run_methods(model, x_data, y_data, x_train, no_images=10, exp_no=0, load=Tru
             pickle.dump(methods, open(methods_name, 'wb'))
             pickle.dump(text, open(text_name, 'wb'))
 
-        ## saliency results: (no_samples, methods, img_size)
+        ## saliency results: size (no_samples, methods, img_size)
         print(' No-images: %d \t No-methods: %d finished.'%(result.shape[0], result.shape[1]))
 
     return result, methods, text, idx
 
-#### Below add additional explanation method outputs ####
-# Each methods must return the result matrix, consisting of resulting saliency output for each methods
+#### Helper functions for additional explanation methods to include ####
+#### NOTE Add additional explanation methods below
+####      Define methods that will take in the result matrix containing outputs from other methods
+####      and add the new method's result to return. 
+####      The result matrix has a shape (no_samples, no_methods, h, w, c), so the output of the new methods
+####      defined below should respect this format and be concatenated to the existing result matrix
+####      along axis=1 (no_methods). 
+####      Below shows examples of adding two new methods (GradCAM and DeepSHAP) and basic steps that 
+####      should be followed within these functions, what should be returned in the end.
 
-## NOTE Add additional explanation methods below
-
+# Function for adding GradCAM results to the existing results.
 def add_grad_cam(result, methods, model, images, exp_no, directory):
+    
+    # compute attributions
     model_name = 'w%0.2f.pt'%exp_no
     c, h, g = grad_cam_run(model, images, os.path.join(directory, model_name), exp_no)
+    
+    # add the new results to the existing results
     added_result = np.expand_dims(h, 1)
     result = np.concatenate((result, added_result), axis=1)
+    
+    # add the new method information to the existing method information
     methods.append(('grad-cam', {}, textcolorutils.graymap, "Grad-CAM"))
+    
+    # return both result and method information
     return result, methods
 
+# Function for adding DeepSHAP results to the existing results.
 def add_shap(result, methods, model, images, labels, x_train, exp_no):
+    
+    # compute attributions
     output = shap_run(model, images, labels, x_train, exp_no)
     h, w, c = images[0].shape
     assert(output.shape == (images.shape[0], 1, h, w, c))
+    
+    # add the new results to the existing results
     result = np.concatenate((result, output), axis=1)
+    
+    # add the new method information to the existing method information
     methods.append(('deep-shap', {}, textcolorutils.graymap, "DeepSHAP"))
+    
+    # return both result and method information
+    return result, methods
+
+# New method to be added to the pipeline
+def add_your_new_method(result, methods, model, images, **kwargs):
+    # TODO fill in the code for your new method to be added.
     return result, methods

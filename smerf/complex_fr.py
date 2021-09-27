@@ -3,7 +3,7 @@ from .eval import *
 import matplotlib.pyplot as plt
 
 ### EXP1.2 Full reliance (complex): two ground-truths: patch and switch
-def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=1.2):
+def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=1.2, random_bg=False):
     def create_data(patch, text, switch, n=n):
         print('Creating %d images with SWITCH=%d / PATCH=%d / TEXT=%d...'%(n, switch, patch, text))
 
@@ -13,7 +13,10 @@ def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=1.2):
             feature[1] = np.random.uniform() #x
             feature[2] = np.random.uniform() #y
             feature[3] = 3 # character color white
-            feature[4] = -2 # black background
+            if random_bg:
+                feature[4] = -3 # random gray background
+            else:
+                feature[4] = -2 # black background
             feature[5] = patch
             if patch:
                 # random patch location
@@ -106,7 +109,7 @@ def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=1.2):
             load_data(exp_no, save_dir)
     else: # otherwise create the new dataset from scratch
         print('Generating data from scratch')
-        train_data, train_coord, train_avoid, train_avoid2 = create_dataset(n=n)
+        train_data, train_coord, train_avoid, train_avoid2 = create_dataset(n=n, train=True)
         test_data, test_coord, test_avoid, test_avoid2 = create_dataset(n=500)
         train_data, test_data, train_primary, train_secondary, test_primary, test_secondary = \
             save_data(exp_no, save_dir, train_data, test_data, train_coord, train_avoid, \

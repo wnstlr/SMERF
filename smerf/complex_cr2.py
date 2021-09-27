@@ -3,7 +3,7 @@ from .eval import *
 import matplotlib.pyplot as plt
 
 ### EXP 3.72 Conditional Reliance 2
-def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=3.72):
+def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=3.72, random_bg=False):
     # sets of features to be corrleated: switch feature (binary), patch feature (binary), text (binary)
     def create_data(switch, patch, text, n=n):
         # create images under specific conitions
@@ -16,7 +16,10 @@ def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=3.72):
             feature[1] = np.random.uniform() #x
             feature[2] = np.random.uniform() #y
             feature[3] = 3 # character color white
-            feature[4] = -2 # black background
+            if random_bg:
+                feature[4] = -3 # random gray background
+            else:
+                feature[4] = -2 # black background
             feature[5] = patch
             if patch:
                 # random patch location
@@ -116,7 +119,7 @@ def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=3.72):
     else: # otherwise create the new dataset from scratch
         print('Generating data from scratch')
         train_data, train_coord, train_avoid, train_avoid2 = create_dataset(n=n)
-        test_data, test_coord, test_avoid, test_avoid2 = create_dataset(n=500)
+        test_data, test_coord, test_avoid, test_avoid2 = create_dataset(n=400)
         train_data, test_data, train_primary, train_secondary, test_primary, test_secondary = \
             save_data(exp_no, save_dir, train_data, test_data, train_coord, train_avoid, \
                       train_avoid2, test_coord, test_avoid, test_avoid2, save=save) 

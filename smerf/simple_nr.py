@@ -3,7 +3,7 @@ from .eval import *
 import matplotlib.pyplot as plt
 
 ### EXP2.11 No Reliance (simple)
-def generate_textbox_data(n=3000, save=True, save_dir='data', exp_no=2.11):
+def generate_textbox_data(n=3000, save=True, save_dir='data', exp_no=2.11, random_bg=False):
     # sets of features to be corrleated: switch feature (binary), patch feature (binary), text (binary)
     def create_data(switch, patch, text, n=n):
         # create images under specific conitions
@@ -16,7 +16,10 @@ def generate_textbox_data(n=3000, save=True, save_dir='data', exp_no=2.11):
             feature[1] = np.random.uniform() #x
             feature[2] = np.random.uniform() #y
             feature[3] = 3 # character color white
-            feature[4] = -2 # black background
+            if random_bg:
+                feature[4] = -3 # random gray background
+            else:
+                feature[4] = -2 # black background
             feature[5] = patch
             if patch:
                 # random patch location

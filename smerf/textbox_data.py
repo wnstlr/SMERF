@@ -22,6 +22,8 @@ def shade(im, v):
         im[:, :, :] = 255 #plain white background
     elif v == -2:
         im[:,:,:] = 0 # plain black background
+    elif v == -3:
+        im[:,:,:] = np.asarray(np.random.random((64,64,3)) * 100, dtype=int) # random gray background
     else:
         im[:, :, 0] = 255 * v
         im[:, :, 2] = 255 * (1 - v)
@@ -43,11 +45,16 @@ def text(im, text, x, y, color = (0,0,0), size = 20):
     return im, (w,h)
 
 def vec2im(features, **kwargs):
+    """
+    Convert a feature into an image with certain features.
+    
+    :return image, text location, small box location
+    """
     im = np.zeros((64, 64, 3), dtype = np.uint8)
         
     im = shade(im, features[4])
     
-    if features[5] == 1:
+    if features[5] == 1: # place large box in the image
         if 'x_start' in kwargs.keys():
             patch_x = kwargs['x_start']
         else:
@@ -65,11 +72,13 @@ def vec2im(features, **kwargs):
             p_delta = kwargs['p_size']
         else:
             p_delta = 10
+        # Add a large box in the image at the location set in the argument.
         im = sticker(im, x_start=patch_x, y_start=patch_y, color=p_color, delta=p_delta)
-    else:
+    else: # no large box in the image so the locations are set to None
         patch_x = None
         patch_y = None
-        
+    
+    # Determine the character to be included in the image
     if features[0] == 0:
         char = "A"
     elif features[0] == 1:
@@ -77,6 +86,7 @@ def vec2im(features, **kwargs):
     elif features[0] == -1:
         char = None # no character
     
+    # Determine the color of the character to be included in the image
     if features[3] == 0: # set text color as  black
         color = (0, 0, 0)
     elif features[3] == 1: # set text color as green
@@ -86,17 +96,26 @@ def vec2im(features, **kwargs):
     elif features[3] == 2: # set manual text color from (R, G, B) input
         color = kwargs['color']
     textloc = (None, None, None, None)
-    # add a switch feature (small sticker at the upper right corner) if turned on
+    
+    # Add text if character is not None
+    if char != None:
+        xstart = int(36 * features[1] + 6)
+        ystart = int(36 * features[2] + 6)
+        im, dim = text(im, char, xstart, ystart, color = color)
+        # keep the location of the character to return
+        textloc = (ystart, ystart+dim[1], xstart, xstart+dim[0])
+    
+    # Add a small box if switch argument is turned on
     dist_ = 300
-    if kwargs['switch'] == 1:
+    if kwargs['switch'] == 1: # small box at a fixed location
         switch_x = 58
         switch_y = 58
         im = sticker(im, x_start=58, y_start=58, delta=4, color=kwargs['s_color'])
-    elif kwargs['switch'] == 2: #switch in random location
+    elif kwargs['switch'] == 2: # small box at a random location
         while True:
             switch_x = np.random.random_integers(0, 53)
             switch_y = np.random.random_integers(0, 53)
-            # prevent overlap of switch with text and patch
+            # prevent overlap of switch with text and larger box
             if patch_x is not None and features[0] != -1: # yes patch, yes character
                 if (int(36*features[1]) - switch_x)**2 + (int(36*features[2]) - switch_y)**2 > dist_+100 and \
                     (patch_x - switch_x)**2 + (patch_y - switch_y)**2 > dist_:
@@ -113,47 +132,28 @@ def vec2im(features, **kwargs):
     else:
         switch_x = None
         switch_y = None
-    # try:
-    #     if kwargs['switch'] == 1:
-    #         switch_x = 58
-    #         switch_y = 58
-    #         im = sticker(im, x_start=58, y_start=58, delta=4, color=kwargs['s_color'])
-    #     elif kwargs['switch'] == 2: #switch in random location
-    #         while True:
-    #             switch_x = np.random.random_integers(0, 53)
-    #             switch_y = np.random.random_integers(0, 53)
-    #             # prevent overlap of switch with text and patch
-    #             if (int(36*features[1]) - switch_x)**2 + (int(36*features[2]) - switch_y)**2 > 100 and \
-    #                 (patch_x - switch_x)**2 + (patch_y - switch_y)**2 > 100:
-    #                 break
-    #         im = sticker(im, x_start=switch_x, y_start=switch_y, delta=4, color=kwargs['s_color'])
-    # except:
-    #     pass
-
-    if char != None:
-        xstart = int(36 * features[1] + 6)
-        ystart = int(36 * features[2] + 6)
-        im, dim = text(im, char, xstart, ystart, color = color)
-        textloc = (ystart, ystart+dim[1], xstart, xstart+dim[0])
-        #patch_loc = (patch_y, patch_y+10, patch_x, patch_x+10)
-
+    
+    # keep the small box location to return
     if switch_x is not None:
         switch_loc = (switch_y, switch_y+4, switch_x, switch_x+4)
     else:
         switch_loc = (None, None, None, None)
+        
+    # return the image generated, character location, and small box location
     return im, textloc, switch_loc
 
 def save_data(exp_no, save_dir, train_data, test_data, train_coord, train_avoid, train_avoid2, test_coord, test_avoid, test_avoid2, save=True):
     # setup bbox info to save to the file
     fname = os.path.join(save_dir, 'textbox_%0.2f.npz'%exp_no)
+    # NOTE need to specify below based on different type of experiments
     if exp_no in [1.11, 2.11]: # for simple FR and NR, only one object to include
         gt_flag = [1,0,0]
     elif exp_no == 1.2: # for complex-FR, there are two ground-truth objects to include
         gt_flag = [1,0,1]
-    elif exp_no >= 3.7:
+    elif exp_no >= 3.7: # for complex-CR, there are two ground-truth objects to inlcude
         gt_flag = [1,0,1]
-    train_primary, train_secondary = setup_bboxes(train_coord, train_avoid, train_avoid2, range(train_data.X.shape[0]), gt_flag=gt_flag)
-    test_primary, test_secondary = setup_bboxes(test_coord, test_avoid, test_avoid2, range(test_data.X.shape[0]), gt_flag=gt_flag)
+    train_primary, train_secondary = setup_bboxes(train_coord, train_avoid, train_avoid2, np.array(range(train_data.X.shape[0])), gt_flag=gt_flag)
+    test_primary, test_secondary = setup_bboxes(test_coord, test_avoid, test_avoid2, np.array(range(test_data.X.shape[0])), gt_flag=gt_flag)
     if save:
         np.savez(open(fname, 'wb'),
                     x_train=train_data.X, 
@@ -185,10 +185,8 @@ def sample_uniform():
     feature[0] = np.random.randint(2) #character
     feature[1] = np.random.uniform() #x
     feature[2] = np.random.uniform() #y
-    #feature[3] = np.random.randint(2) #color of character
     feature[3] = 0
     feature[4] = np.random.uniform() # shade
-    #feature[5] = np.random.randint(2) #sticker
     feature[5] = 0
     return feature
 

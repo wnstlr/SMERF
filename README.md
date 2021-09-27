@@ -36,7 +36,15 @@ Individual elements of the dataset can be accessed via the following keys:
 - `'test_primary'`: list of coordinates of primary objects in each image of the test data (`numpy.ndarray`)
 - `'test_secondary'`: list of coordinates of secondary objects in each image of the test data (`numpy.ndarray`)
 
-Several examples of accessing each elements of the dataset and visualizing them is demonstrated in a Jupyter notebook: `notebooks/extra figures.ipynb`. Download the data files from [here](https://bit.ly/37DpMU3). 
+Several examples of accessing each elements of the dataset and visualizing them is demonstrated in a Jupyter notebook: `notebooks/extra figures.ipynb`. Download the specific data files used for the experiments in the paper from [here](https://bit.ly/37DpMU3), or simply run 
+
+```cd scripts; python get_data.py```, 
+
+which will download the file from the link to the `data` directory (using [gdown](https://github.com/wkentaro/gdown)). 
+
+##### Generating new datasets
+
+To generate new datasets from scratch, simply run the code without any files in the ```data``` directory. The code will check for existing files to refer to, otherwise generate new ones according to each setting. 
 
 ## Running the benchmarking experiments
 
@@ -64,13 +72,25 @@ Any outputs generated in SMERF for each of these cases will have the correspondi
 
 ##### Notebooks for Plotting 
 
-After the script files are run and the metric values are all computed, the plots presented in the paper can be reproduced from Jupyter notebooks in the `notebooks` directory.
+After the script files are run and the metric values are all computed, the plots presented (similar to the ones) in the paper can be reproduced from several Jupyter notebooks under the `notebooks` directory.
 
 - `IOU_AFL_MAFL_plots.ipynb`: plots for the IOU, AFL, and MAFL metrics.
 - `failures.ipynb`: plots for bucket-wise detials on failure cases (i.e low metric values)
 - `id_test.ipynb`: side-by-side comparison of feature attributions obtained from different model reasoning on the same input.
 - `obj_added.ipynb`: increasing number of objects added to the image and observing the changes of metric values.
 - `extra figures.ipynb`: extra figures from the Appendix in the paper.
+
+##### Adding new experimental setup to the pipeline
+
+To add new experimental setups, new datasets based on new model reasoning should be generated. Copy `smerf/simple_fr.py` to a new file and modify the code within to generate new datasets with new type of reasoning and features. The essence is that the output of the function `generate_textbox_data()` in the new file should inlcude training/testing data (both images and labels), and the coordinates of the primary and secondary objects in each image in the format provided. This information will be used for computing the evaluation metrics in the end. 
+
+Models can be modified from `smerf/models.py` file. 
+
+##### Adding new saliency methods to the pipeline
+
+The model is a CNN compiled with `keras==2.2.4, tensorflow==1.12.0`. Refer to `smerf/models.py` file for the details of the model. Therefore, new saliency methods added to the pipeline should be implemented for this model.
+
+To add new saliency methods, we recommend writing a helper function that takes in the data and the model, computes the attribution values for the data, and concatenates those values to the existing set of results obtained from other methods. Refer to NOTEs under `smerf/explanations.py` for details on where and how new methods should be added. 
 
 ## Link for data and results used for the paper
 

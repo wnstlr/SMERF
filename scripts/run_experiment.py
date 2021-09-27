@@ -8,38 +8,38 @@ from smerf.models import *
 from smerf.textbox_data import *
 from smerf.eval import *
 import smerf.explanations as saliency
+import argparse
 
+# Directory to save the data
 DATA_DIR = '../data'
 
+# Directory to save intermediary/final results
 CACHE_DIR = '../outputs/cache'
-#CACHE_DIR = '../outputs/test' 
 if not os.path.exists(CACHE_DIR):
     os.mkdir(CACHE_DIR)
     
-#PLOT_DIR = '../outputs/test'
+# Directory to save plots
 PLOT_DIR = '../outputs/plots'
 if not os.path.exists(PLOT_DIR):
     os.mkdir(PLOT_DIR)
 
-import argparse
-
 def main(args):
-    exp_no = args.exp
-    model_name = 'w%0.2f.pt'%exp_no
+    exp_no = args.exp # experiment number
+    model_name = 'w%0.2f.pt'%exp_no # model file to save/load
     print('EXP_NO = %f'%exp_no)
-    lr = args.lr
-    epoch = args.ep
+    lr = args.lr # learning rate used to train the model
+    epoch = args.ep # number of maximum epochs to train the model
+    random_bg = args.bg # whether to use random background
 
-    ### Below defines the hyperparameters for each experiment setups. 
-    ### For new experiments, these should be stated explicitly. 
-    if exp_no == 1.11: ## Simple-FR: moving patch (white)
-        import smerf.simple_fr as textbox_exp
-        no_data = 2000
-        no_test_per_split = 500
-        no_split = 12
-        other_methods = []
-        enforce = None
-        ## define split names
+    ### NOTE Below defines the hyperparameters for each experiment setups. 
+    ### These should be stated explicitly for every new experiment setups added.
+    if exp_no == 1.11: ## Simple-FR
+        import smerf.simple_fr as textbox_exp # import textbox data generator method define separately
+        no_data = 2000 # number of training data points per bucket 
+        no_test_per_split = 500 # number of test data points per bucket
+        no_split = 12 # number of buckets
+        
+        # define the bucket IDs and names: information about features used
         split_names = dict()
         patch = [0,1]
         text = ['None','A','B']
@@ -50,16 +50,14 @@ def main(args):
                 for s in switch:
                     split_names[count] = 'Switch=%d / Patch=%d / Character=%s'%(s,p,t)
                     count += 1
+        # make sure that the number of buckets is set up correctly.
         assert(no_split == count)
 
-    elif exp_no == 2.11: ## Simple-NR: patch and switch (moving) (white text, black background)
+    elif exp_no == 2.11: ## Simple-NR
         import smerf.simple_nr as textbox_exp
         no_data = 5000
         no_test_per_split = 500
         no_split = 8
-        other_methods = []
-        enforce = None
-        ## define split names
         split_names = dict()
         switch = [0,1]
         patch = [0,1]
@@ -72,14 +70,11 @@ def main(args):
                     count += 1
         assert(no_split==count)
 
-    elif exp_no == 1.2: ## Complex-FR: complex (two ground-truth objects)
+    elif exp_no == 1.2: ## Complex-FR
         import smerf.complex_fr as textbox_exp
         no_data = 2000
         no_test_per_split = 500
         no_split = 12
-        other_methods = []
-        enforce = None
-        ## define split names
         split_names = dict()
         patch = [0,1]
         text = ['None','A','B']
@@ -97,8 +92,6 @@ def main(args):
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
-        other_methods = []
-        ## define split names
         split_names = dict()
         switch = [0,2]
         patch = [0,1]
@@ -118,8 +111,6 @@ def main(args):
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
-        other_methods = []
-        ## define split names
         split_names = dict()
         switch = [0,2]
         patch = [0,1]
@@ -139,8 +130,6 @@ def main(args):
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
-        other_methods = []
-        ## define split names
         split_names = dict()
         switch = [0,2]
         patch = [0,1]
@@ -160,8 +149,6 @@ def main(args):
         no_data = 15000
         no_test_per_split = 400
         no_split = 10
-        other_methods = []
-        ## define split names
         split_names = dict()
         switch = [0,2]
         patch = [0,1]
@@ -175,24 +162,25 @@ def main(args):
                     split_names[count] = 'Switch=%d / Patch=%d / Character=%s'%(s, p, t)
                     count += 1
         assert(no_split == count)
-
-    # NOTE more experiments should be added below
+    # NOTE more experiments should be added here under the elif statement with appropriate exp_no and hyperparameters.
+    
     else:
         raise ValueError('exp_no %f not defined'%exp_no)
-            
+    
+    ### Generate (or load) datasets        
     train_data, test_data, train_primary, test_primary, train_secondary, test_secondary = \
                 textbox_exp.generate_textbox_data(n=no_data, 
                                                   save=True, 
                                                   save_dir='../data', 
-                                                  exp_no=exp_no)
-    
+                                                  exp_no=exp_no,
+                                                  random_bg=random_bg)
     x_train = train_data.X
     x_test = test_data.X
     y_train = train_data.y
     y_test = test_data.y
     assert(x_test.shape[0] == no_test_per_split * no_split)
 
-    ### Train model
+    ### Train model   
     print('Training model...')
     train_acc = 0.0
     test_acc = 0.0
@@ -226,6 +214,7 @@ def main(args):
             if train_acc >= thr and test_acc >= thr: # train until high accuracy
                 found = True
                 break
+            print('Retraining due to low performance')
         if found:
             break
     if not found:
@@ -240,7 +229,8 @@ def main(args):
     idx = []
     text = []
     for i in range(no_split):
-        ######### HACK: comment this portion to run everything on a single run. Currently, doing so is slower than aborting the process and rerunning. 
+        ######### HACK: comment this portion to run everything on a single run. 
+        ######### Currently, doing so is slower than aborting the process and rerunning due to memory issues.
         exit_after = False
         existing_instance = os.path.exists(os.path.join(CACHE_DIR, 'result_%0.2f_%d.pkl'%(exp_no, i)))
         if not existing_instance:
@@ -261,7 +251,7 @@ def main(args):
                                  split=i)
         ########### HACK: comment this portion to run the whole thing at once. 
         if exit_after:
-            assert(False)
+            assert False, "**\n**\n**Terminating and rerunning from where left off to prevent memory build-up issues.\n**\n**\n**"
         ################################################################
         _idx = _idx + i_start
         result.append(_result)
@@ -339,7 +329,7 @@ def main(args):
     print('==> All metrics computed for all buckets.')
 
     print('Plotting...')
-    #Plot IOU overall
+    #Plot metrics overall
     print('-- PIOU - multithresholding')
     plot_iou(methods, m_piou_plain, s_piou_plain, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou'%exp_no))
     print('-- SIOU - multithresholding')
@@ -416,6 +406,7 @@ if __name__ == '__main__':
     parser.add_argument('--n', type=float, default=100, help='number of images to run experiments on per group')
     parser.add_argument('--ep', type=int, default=10, help='max epoch')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+    parser.add_argument('--bg', type=int, default=0, help='set this to 1 for random background, 0 for zero background')
     args = parser.parse_args()
     print(args)
     main(args)

@@ -66,8 +66,6 @@ class TextBoxCNN:
             cb = []
         if os.path.exists(self.modelfile) and not retrain:
             self.model.load_weights(self.modelfile)
-        elif os.path.exists(self.modelfile) and retrain:
-            raise ValueError('Set retrain=False')
         elif not os.path.exists(self.modelfile) and retrain:
             raise ValueError('modelfile not found')
         else:
