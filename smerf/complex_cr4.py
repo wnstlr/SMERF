@@ -17,7 +17,7 @@ def generate_textbox_data(n=10000, save=True, save_dir='data', exp_no=3.74, rand
             feature[2] = np.random.uniform() #y
             feature[3] = 3 # character color white
             if random_bg:
-                feature[4] = -3 # random gray background
+                feature[4] = -4 # natural background
             else:
                 feature[4] = -2 # black background
             feature[5] = patch

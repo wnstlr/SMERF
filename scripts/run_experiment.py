@@ -185,9 +185,22 @@ def main(args):
     train_acc = 0.0
     test_acc = 0.0
     lr_vals = [args.lr]
+    if random_bg == 1:
+        if exp_no >= 3.5:
+            thr = 0.90
+        elif exp_no == 1.2:
+            thr = 0.90
+        else:
+            thr = 0.95
+    else:
+        if exp_no >= 3.5 or exp_no == 1.2:
+            thr = 0.95
+        else:
+            thr = 0.99
     found = False
+    prev_test_acc = 0
     for ll in lr_vals:
-        for i in range(50):
+        for i in range(20):
             if i == 0:
                 retrain = False
             else:
@@ -197,28 +210,35 @@ def main(args):
                                         model_name=model_name, 
                                         max_epoch=epoch, 
                                         output_dir=CACHE_DIR)
-                if exp_no >= 3.5:
-                    thr = 0.95
-                else:
-                    thr = 0.99
             else:
                 model_obj = TextBoxCNN(lr=ll, 
                                         model_name=model_name, 
                                         max_epoch=epoch, 
                                         output_dir=CACHE_DIR)
-                thr = 0.995
+            
             model_obj.train(x_train, y_train, retrain=retrain, earlystop=True)
             train_acc = model_obj.test(x_train, y_train)
             test_acc = model_obj.test(x_test, y_test)
             model = model_obj.model
+            
             if train_acc >= thr and test_acc >= thr: # train until high accuracy
                 found = True
                 break
-            print('Retraining due to low performance')
+            else:
+                if test_acc > prev_test_acc:
+                    model.save_weights(os.path.join(CACHE_DIR, 'w%0.2f.pt'%exp_no))
+                    prev_test_acc = test_acc
+            print('-- Retraining due to low performance')
+            print('-- Best so far: [%0.4f]'%prev_test_acc)
         if found:
             break
     if not found:
-        raise ValueError('failed to train a model')
+        print('==> Failed to train a model that passes the threshold accuracy [%0.4f]'%thr)
+        if prev_test_acc > 1:
+            model.load_weights(os.path.join(CACHE_DIR, 'w%0.2f.pt'%exp_no))
+            print('==> Loading and proceeding with a model with suboptimal accuracy [%0.4f]'%prev_test_acc)
+        else:
+            raise ValueError('*** Aborting from training issues ***')
 
     ### Run saliency methods
     print('Running Saliency Methods...')
@@ -350,19 +370,6 @@ def main(args):
     print('-- SMAFL')
     plot_iou(methods, m_avg_siou, s_avg_siou, fname=os.path.join(PLOT_DIR, 'exp%0.2f_iou_avoid_avg_weighted'%exp_no))
 
-    # Plot samples per bucket
-    # print('-- Samples per bucekt')
-    # for i in range(no_split):
-    #     print(split_names[i])
-    #     i_start = i * no_sample_per_block
-    #     i_end = i_start + 10
-    #     fname = os.path.join(PLOT_DIR, 'samples_%0.2f_%d'%(exp_no, i))
-    #     smerf.eval.visualize_examples(result[i_start:i_end], 
-    #                                   methods, 
-    #                                   text[i_start:i_end], 
-    #                                   idx[i_start:i_end], 
-    #                                   fname=fname)
-
     # Plot across different groups with different feature
     print('-- Per Bucket Information')
     eval_per_bucket(weighted_raw, 
@@ -406,7 +413,7 @@ if __name__ == '__main__':
     parser.add_argument('--n', type=float, default=100, help='number of images to run experiments on per group')
     parser.add_argument('--ep', type=int, default=10, help='max epoch')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
-    parser.add_argument('--bg', type=int, default=0, help='set this to 1 for random background, 0 for zero background')
+    parser.add_argument('--bg', type=int, default=0, help='set this to 1 for natural background, 0 for zero background')
     args = parser.parse_args()
     print(args)
     main(args)

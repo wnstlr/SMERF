@@ -46,6 +46,14 @@ which will download the file from the link to the `data` directory (using [gdown
 
 To generate new datasets from scratch, simply run the code without any files in the ```data``` directory. The code will check for existing files to refer to, otherwise generate new ones according to each setting. 
 
+##### Generating dataset with realistic backgrounds
+
+We used [Places365 dataset](http://places2.csail.mit.edu/download.html) for the backgrounds. Specifically, download [small-size validation images](http://data.csail.mit.edu/places/places365/val_256.tar) and [metadata](http://data.csail.mit.edu/places/places365/filelist_places365-standard.tar), then place the unzipped folders under the ```data``` directory. Then run 
+
+```cd scripts; python get_places365.py```
+
+to create a metadata pickle file (`data/places_img_file.pkl`) that will be used for the experiments.
+
 ## Running the benchmarking experiments
 
 ##### Create subdirectories required for saving intermediary data and results:

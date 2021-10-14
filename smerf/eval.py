@@ -32,7 +32,8 @@ def get_afl(sal, bbox_lst, methods, method_idx):
         bbox = bbox_lst[i]
         mask = get_binary_masks(bbox, pp.shape)
         inters = pp * mask
-        score = inters[bbox[0]:bbox[1], bbox[2]:bbox[3]].sum()
+        score = inters.sum()
+        #score = inters[bbox[0]:bbox[1], bbox[2]:bbox[3]].sum()
         score_vals.append(score)
     return sum(score_vals)
 

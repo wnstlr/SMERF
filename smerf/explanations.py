@@ -14,6 +14,7 @@ from tqdm import tqdm
 #      We recommend specifying these methods on a separate file to avoid clutter.
 from .grad_cam_utils import *
 from .shap_utils import *
+from .lime_utils import *
 
 def softmax(x):
     return np.exp(x) / np.sum(np.exp(x), axis=1)[:, None]
@@ -172,6 +173,10 @@ def run_methods(model,
         # Add SHAP
         print(' Running SHAP')
         result, methods = add_shap(result, methods, model, images, labels, x_train, exp_no)
+        
+        # # Add LIME
+        # print(' Running LIME')
+        # result, methods = add_lime(result, methods, model, images, labels, x_train, exp_no)
 
         # random baseline
         print(' Running random')
@@ -242,6 +247,22 @@ def add_shap(result, methods, model, images, labels, x_train, exp_no):
     
     # add the new method information to the existing method information
     methods.append(('deep-shap', {}, textcolorutils.graymap, "DeepSHAP"))
+    
+    # return both result and method information
+    return result, methods
+
+def add_lime(result, methods, model, images, labels, x_train, exp_no):
+    
+    # compute attributions
+    output = lime_run(model, images, labels, x_train, exp_no)
+    h, w, c = images[0].shape
+    assert(output.shape == (images.shape[0], 1, h, w, c))
+    
+    # add the new results to the existing results
+    result = np.concatenate((result, output), axis=1)
+    
+    # add the new method information to the existing method information
+    methods.append(('lime', {}, textcolorutils.graymap, "LIME"))
     
     # return both result and method information
     return result, methods

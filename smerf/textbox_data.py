@@ -1,9 +1,12 @@
 import numpy as np
 import PIL
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 from torch.utils.data import Dataset, DataLoader
 import os
 from smerf.eval import setup_bboxes
+import pickle
+
+DATA_DIR = '../data/'
 
 class TextBoxDataset(Dataset):
     def __init__(self, X, y):
@@ -24,6 +27,20 @@ def shade(im, v):
         im[:,:,:] = 0 # plain black background
     elif v == -3:
         im[:,:,:] = np.asarray(np.random.random((64,64,3)) * 100, dtype=int) # random gray background
+    elif v == -4:
+        # natural image background
+        places_img_file = pickle.load(open(os.path.join(DATA_DIR, 'places_img_file.pkl'), 'rb'))
+        choices = places_img_file['stadium/baseball']
+        img_ids = [0, 9, 10, 12, 15, 16, 17, 19, 20, 21, 24, 25, 26, 27, 28, 33, 34, 35, 37, 39, 41, 42, 43, 45, 46, 47, 49, 50, 51, 52, 55, 56, 58, 64, 65, 58, 68, 71, 74, 78, 86, 88, 90, 91, 92, 93]
+        #choices = places_img_file['bamboo_forest'] 
+        #img_ids = [0, 1, 2, 3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 25, 28, 37, 44, 47, 57, 59, 65, 68, 69, 72, 75, 77, 85, 93, 96, 98, 99]
+        img_dir = os.path.join(DATA_DIR, 'val_256')
+        img = Image.open(os.path.join(img_dir, choices[np.random.choice(img_ids)]))
+        img = img.resize((64,64))
+        enhancer = ImageEnhance.Brightness(img)
+        img = enhancer.enhance(0.7)
+        img = np.array(img)
+        im[:,:,:] = img
     else:
         im[:, :, 0] = 255 * v
         im[:, :, 2] = 255 * (1 - v)
