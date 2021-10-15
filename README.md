@@ -36,11 +36,7 @@ Individual elements of the dataset can be accessed via the following keys:
 - `'test_primary'`: list of coordinates of primary objects in each image of the test data (`numpy.ndarray`)
 - `'test_secondary'`: list of coordinates of secondary objects in each image of the test data (`numpy.ndarray`)
 
-Several examples of accessing each elements of the dataset and visualizing them is demonstrated in a Jupyter notebook: `notebooks/extra figures.ipynb`. Download the specific data files used for the experiments in the paper from [here](https://bit.ly/37DpMU3), or simply run 
-
-```cd scripts; python get_data.py```, 
-
-which will download the file from the link to the `data` directory (using [gdown](https://github.com/wkentaro/gdown)). 
+Several examples of accessing each elements of the dataset and visualizing them is demonstrated in a Jupyter notebook: `notebooks/extra figures.ipynb`. Download the specific data files used for the experiments in the paper from [here](https://drive.google.com/file/d/1ShdZDTPM1r7dVVuXUI3TushLArSHzDbl/view?usp=sharing), unzip, and place the content in the `data` directory.
 
 ##### Generating new datasets
 
@@ -60,19 +56,22 @@ to create a metadata pickle file (`data/places_img_file.pkl`) that will be used 
 
 ```mkdir outputs outputs/cache outputs/plots```
 
-- `outputs/cache` directory is used to store all intermediary/final outputs from SMERF, e.g. trained models, saliency outputs, evalauted metric values, etc.
+- `outputs/cache` directory is used to store all intermediary/final outputs from SMERF, e.g. trained models, saliency outputs, evaluated metric values, etc.
 - `outputs/plots` is used to store all plots generated in the process. 
 
 ##### To individually run each model reasoning settings:
 
-```cd scripts; python run_experiments.py --exp {EXP_NO}```
+```cd scripts; python run_experiments.py --exp {EXP_NO} --bg {BACKGROUND_NATURAL}```
 
 Replace EXP_NO with the experiment number specific to each model reasoning setting as shown earlier. 
+
+Replace BACKGROUND_NATURAL with either 0 or 1, for black background or natural background respectively (default is black background).
 
 
 ##### To run the entire set of model reasoning settings:
 
-Run the script file in `scripts` directory: `cd scripts; bash run.sh`
+Run the script file in `scripts` directory: `cd scripts; bash run.sh`.
+Modify `--bg` arguments in the script file to 1 to run experiments with natural images.
 
 This will run the whole pipeline of SMERF for all model reasoning specified in the paper. It will generating a dataset with specified ground-truth, train a model, run saliency methods, evaluate them based on different metrics, and save the outputs. 
 
@@ -102,4 +101,4 @@ To add new saliency methods, we recommend writing a helper function that takes i
 
 ## Link for data and results used for the paper
 
-The specific files in `data` and `outputs` directories that were used to generate our results in the paper are available [here](https://drive.google.com/drive/folders/1KzC3QrPYAri4Uyd6HVfoGbPRi3jdaGDO?usp=sharing). 
+The specific files in `data` and `outputs` directories that were used to generate our results in the paper are available [here](https://drive.google.com/drive/folders/1E__OIsOqhV6wSkuRORLeaeFQhVZhohKP?usp=sharing). Unzip and place the contents in the respective directory to reproduce the results presented in the paper.
