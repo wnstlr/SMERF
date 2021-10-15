@@ -42,13 +42,15 @@ Several examples of accessing each elements of the dataset and visualizing them 
 
 To generate new datasets from scratch, simply run the code without any files in the ```data``` directory. The code will check for existing files to refer to, otherwise generate new ones according to each setting. 
 
-##### Generating dataset with realistic backgrounds
+##### Generating dataset with natural backgrounds
 
 We used [Places365 dataset](http://places2.csail.mit.edu/download.html) for the backgrounds. Specifically, download [small-size validation images](http://data.csail.mit.edu/places/places365/val_256.tar) and [metadata](http://data.csail.mit.edu/places/places365/filelist_places365-standard.tar), then place the unzipped folders under the ```data``` directory. Then run 
 
 ```cd scripts; python get_places365.py```
 
-to create a metadata pickle file (`data/places_img_file.pkl`) that will be used for the experiments.
+to create a metadata pickle file (`data/places_img_file.pkl`) that will be used for generating the image files and running the experiments.
+
+Specific set of images used in our experiment for natural background setting is available [here](https://drive.google.com/file/d/1vppHFKI-4QCrbn_xJRiPTRFgRP2siYWu/view?usp=sharing), under the same format as the original dataset.
 
 ## Running the benchmarking experiments
 
