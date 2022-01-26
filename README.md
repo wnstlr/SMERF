@@ -110,4 +110,9 @@ To add new saliency methods, we recommend writing a helper function that takes i
 
 ## Link for results used in the paper
 
-The specific files in `outputs` directories that were used to generate our results in the paper are available [here](https://drive.google.com/drive/folders/1E__OIsOqhV6wSkuRORLeaeFQhVZhohKP?usp=sharing). Unzip and place the contents in the respective directory to reproduce the results presented in the paper. There are three files: `outputs.zip` for the simple CNN, `outputs_alex.zip` for AlexNet, `outputs_vgg.zip` for VGG16, and `outputs_baseball.zip` for the simple CNN using real background images.
+The specific files in `outputs` directories that were used to generate our results in the paper are available [here](https://drive.google.com/drive/folders/1E__OIsOqhV6wSkuRORLeaeFQhVZhohKP?usp=sharing). Unzip and place the contents in the respective directory to reproduce the results presented in the paper.
+
+- `outputs.zip` for the simple CNN with black background images
+- `outputs_alex.zip` for AlexNet with black background images
+- `outputs_vgg.zip` for VGG16 with black background images
+- `outputs_baseball.zip` for the simple CNN with real background images.
