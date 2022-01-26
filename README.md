@@ -38,11 +38,11 @@ Individual elements of the dataset can be accessed via the following keys:
 
 Several examples of accessing each elements of the dataset and visualizing them is demonstrated in a Jupyter notebook: `notebooks/extra figures.ipynb`. Download the specific data files used for the experiments in the paper from [here](https://drive.google.com/file/d/1ShdZDTPM1r7dVVuXUI3TushLArSHzDbl/view?usp=sharing), unzip, and place the content in the `data` directory.
 
-##### Generating new datasets
+#### Generating new datasets
 
 To generate new datasets from scratch, simply run the code without any files in the ```data``` directory. The code will check for existing files to refer to, otherwise generate new ones according to each setting. 
 
-##### Generating dataset with natural backgrounds
+#### Generating dataset with natural backgrounds
 
 We used [Places365 dataset](http://places2.csail.mit.edu/download.html) for the backgrounds. Specifically, download [small-size validation images](http://data.csail.mit.edu/places/places365/val_256.tar) and [metadata](http://data.csail.mit.edu/places/places365/filelist_places365-standard.tar), then place the unzipped folders under the ```data``` directory. Then run 
 
@@ -54,14 +54,14 @@ Specific set of images used in our experiment for natural background setting is 
 
 ## Running the benchmarking experiments
 
-##### Create subdirectories required for saving intermediary data and results:
+#### Create subdirectories required for saving intermediary data and results:
 
 ```mkdir outputs outputs/cache outputs/plots```
 
 - `outputs/cache` directory is used to store all intermediary/final outputs from SMERF, e.g. trained models, saliency outputs, evaluated metric values, etc.
 - `outputs/plots` is used to store all plots generated in the process. 
 
-##### To individually run each model reasoning settings:
+#### To individually run each model reasoning settings:
 
 ```cd scripts; python run_experiments.py --exp {EXP_NO} --bg {BACKGROUND_NATURAL} --model_type {MODEL_TYPE} --ep {EPOCH_NO} --lr {LR}```
 
@@ -75,7 +75,7 @@ Replace EPOCH_NO with maximum epoch number for training.
 
 Replace LR with learning rate for training.
 
-##### To run the entire set of model reasoning settings:
+#### To run the entire set of model reasoning settings:
 
 Run the script file in `scripts` directory: `cd scripts; bash run.sh`.
 Modify `--bg` arguments in the script file to 1 to run experiments with natural images.
@@ -84,28 +84,30 @@ This will run the whole pipeline of SMERF for all model reasoning specified in t
 
 Any outputs generated in SMERF for each of these cases will have the corresponding `EXP_NO` included in the filename.
 
-##### Notebooks for Plotting 
+#### Notebooks for Plotting 
 
 After the script files are run and the metric values are all computed, the plots presented (similar to the ones) in the paper can be reproduced from several Jupyter notebooks under the `notebooks` directory.
 
 - `IOU_AFL_MAFL_plots.ipynb`: plots for the IOU, AFL, and MAFL metrics.
+- `IOU-AFL-architecture-plots.ipynb`: plots for the IOU, AFL for different architectures.
+- `comparison-backgrounds.ipynb`: plots comparing cases with different background (black vs real)
 - `failures.ipynb`: plots for bucket-wise detials on failure cases (i.e low metric values)
 - `id_test.ipynb`: side-by-side comparison of feature attributions obtained from different model reasoning on the same input.
 - `obj_added.ipynb`: increasing number of objects added to the image and observing the changes of metric values.
 - `extra figures.ipynb`: extra figures from the Appendix in the paper.
 
-##### Adding new experimental setup to the pipeline
+#### Adding new experimental setup to the pipeline
 
 To add new experimental setups, new datasets based on new model reasoning should be generated. Copy `smerf/simple_fr.py` to a new file and modify the code within to generate new datasets with new type of reasoning and features. The essence is that the output of the function `generate_textbox_data()` in the new file should inlcude training/testing data (both images and labels), and the coordinates of the primary and secondary objects in each image in the format provided. This information will be used for computing the evaluation metrics in the end. 
 
 Models can be modified from `smerf/models.py` file. 
 
-##### Adding new saliency methods to the pipeline
+#### Adding new saliency methods to the pipeline
 
 The model is a CNN compiled with `keras==2.2.4, tensorflow==1.12.0`. Refer to `smerf/models.py` file for the details of the model. Therefore, new saliency methods added to the pipeline should be implemented for this model.
 
 To add new saliency methods, we recommend writing a helper function that takes in the data and the model, computes the attribution values for the data, and concatenates those values to the existing set of results obtained from other methods. Refer to NOTEs under `smerf/explanations.py` for details on where and how new methods should be added. 
 
-## Link for data and results used for the paper
+## Link for results used in the paper
 
-The specific files in `data` and `outputs` directories that were used to generate our results in the paper are available [here](https://drive.google.com/drive/folders/1E__OIsOqhV6wSkuRORLeaeFQhVZhohKP?usp=sharing). Unzip and place the contents in the respective directory to reproduce the results presented in the paper.
+The specific files in `outputs` directories that were used to generate our results in the paper are available [here](https://drive.google.com/drive/folders/1E__OIsOqhV6wSkuRORLeaeFQhVZhohKP?usp=sharing). Unzip and place the contents in the respective directory to reproduce the results presented in the paper. There are three files: `outputs.zip` for the simple CNN, `outputs_alex.zip` for AlexNet, `outputs_vgg.zip` for VGG16, and `outputs_baseball.zip` for the simple CNN using real background images.
