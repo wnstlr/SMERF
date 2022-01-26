@@ -25,11 +25,19 @@ if not os.path.exists(PLOT_DIR):
 
 def main(args):
     exp_no = args.exp # experiment number
-    model_name = 'w%0.2f.pt'%exp_no # model file to save/load
     print('EXP_NO = %f'%exp_no)
     lr = args.lr # learning rate used to train the model
     epoch = args.ep # number of maximum epochs to train the model
     random_bg = args.bg # whether to use random background
+    model_type = args.model_type # whether to use advanced models
+    if model_type == 0:
+        model_name = 'w%0.2f.pt'%exp_no # model file to save/load
+    elif model_type == 1:
+        model_name = 'w_vgg%0.2f.pt'%exp_no 
+    elif model_type == 2:
+        model_name = 'w_alex%0.2f.pt'%exp_no 
+    else: 
+        raise ValueError('Invalid model type')
 
     ### NOTE Below defines the hyperparameters for each experiment setups. 
     ### These should be stated explicitly for every new experiment setups added.
@@ -185,7 +193,7 @@ def main(args):
     train_acc = 0.0
     test_acc = 0.0
     lr_vals = [args.lr]
-    if random_bg == 1:
+    if random_bg == 1: # real background
         if exp_no >= 3.5:
             thr = 0.90
         elif exp_no == 1.2:
@@ -196,29 +204,37 @@ def main(args):
         if exp_no >= 3.5 or exp_no == 1.2:
             thr = 0.95
         else:
-            thr = 0.99
+            thr = 0.98
     found = False
     prev_test_acc = 0
+    
     for ll in lr_vals:
-        for i in range(20):
+        for i in range(20): 
             if i == 0:
                 retrain = False
             else:
                 retrain = True
-            if exp_no >= 3.5 or exp_no == 1.2:
-                model_obj = TextBoxCNN_adv(lr=ll, 
-                                        model_name=model_name, 
-                                        max_epoch=epoch, 
-                                        output_dir=CACHE_DIR)
+            if model_type == 0:
+                if exp_no >= 3.5 or exp_no == 1.2:
+                    model_obj = TextBoxCNN_adv(lr=ll, 
+                                            model_name=model_name, 
+                                            max_epoch=epoch, 
+                                            output_dir=CACHE_DIR)
+                else:
+                    model_obj = TextBoxCNN(lr=ll, 
+                                            model_name=model_name, 
+                                            max_epoch=epoch, 
+                                            output_dir=CACHE_DIR)
+            elif model_type == 1: # vgg
+                model_obj = VGG16_model(lr=ll, model_name=model_name, max_epoch=epoch, output_dir=CACHE_DIR)
+            elif model_type == 2: # alexnet
+                model_obj = AlexNet_model(lr=ll, model_name=model_name, max_epoch=epoch, output_dir=CACHE_DIR)
             else:
-                model_obj = TextBoxCNN(lr=ll, 
-                                        model_name=model_name, 
-                                        max_epoch=epoch, 
-                                        output_dir=CACHE_DIR)
+                raise ValueError('model_type %d not defined'%model_type)
             
             model_obj.train(x_train, y_train, retrain=retrain, earlystop=True)
-            train_acc = model_obj.test(x_train, y_train)
-            test_acc = model_obj.test(x_test, y_test)
+            train_acc = model_obj.test(x_train, y_train) 
+            test_acc = model_obj.test(x_test, y_test) 
             model = model_obj.model
             
             if train_acc >= thr and test_acc >= thr: # train until high accuracy
@@ -268,7 +284,8 @@ def main(args):
                                  no_images=no_sample_per_block, 
                                  exp_no=exp_no, 
                                  load=True, 
-                                 split=i)
+                                 split=i,
+                                 model_type=model_type)
         ########### HACK: comment this portion to run the whole thing at once. 
         if exit_after:
             assert False, "**\n**\n**Terminating and rerunning from where left off to prevent memory build-up issues.\n**\n**\n**"
@@ -414,6 +431,7 @@ if __name__ == '__main__':
     parser.add_argument('--ep', type=int, default=10, help='max epoch')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--bg', type=int, default=0, help='set this to 1 for natural background, 0 for zero background')
+    parser.add_argument('--model_type', type=int, default=0, help='set this to 0 for simple CNN, 1 for vgg16, 2 for AlexNet for the base model')
     args = parser.parse_args()
     print(args)
     main(args)

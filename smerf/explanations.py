@@ -10,6 +10,7 @@ import pickle
 import os
 from tqdm import tqdm
 
+
 # NOTE Helper functions for saliency methods that are not supported by iNNvestigate libary
 #      We recommend specifying these methods on a separate file to avoid clutter.
 from .grad_cam_utils import *
@@ -28,7 +29,8 @@ def run_methods(model,
                 load=True, 
                 f_name=None, 
                 directory='../outputs/cache', 
-                split=None):
+                split=None,
+                model_type=0):
     """
     Given a trained model, run saliency methods and return the results.
 
@@ -40,6 +42,7 @@ def run_methods(model,
     :param load: if True, load from a cached results
     :param directory: directory to save or load the results
     :param split: if not None, specifies the bucket index the methods are run on 
+    :param model_type: 0 (default) for simple CNNs. 1 for VGG16. 2 for ResNet50.
 
     :return (result, method, text, idx) tuple where result is (no_images, M, H, C, W) saliency output 
     for M methods and no_images images; method is the list of configs for the saliency methods; 
@@ -139,12 +142,24 @@ def run_methods(model,
                     # Do not analyze, but keep not preprocessed input.
                     a = images
             elif analyzer:
-                # Analyze.
-                a = analyzer.analyze(images)
-                # Apply common postprocessing, e.g., re-ordering the channels for plotting.
-                a = textcolorutils.postprocess(a, color_conversion, channels_first)
-                # Apply analysis postprocessing, e.g., creating a heatmap.
-                a = methods[aidx][2](a)
+                if model_type != 0: # NOTE for fine-tuned model, deep lift does not support maxpooling2d
+                    if 'deep_lift' not in methods[aidx][0]:
+                        # Analyze.
+                        a = analyzer.analyze(images)
+                        # Apply common postprocessing, e.g., re-ordering the channels for plotting.
+                        a = textcolorutils.postprocess(a, color_conversion, channels_first)
+                        # Apply analysis postprocessing, e.g., creating a heatmap.
+                        a = methods[aidx][2](a)
+                    else:
+                        print('deepLift does not support specific layers')
+                        a = np.zeros_like(images)
+                else:
+                    # Analyze.
+                    a = analyzer.analyze(images)
+                    # Apply common postprocessing, e.g., re-ordering the channels for plotting.
+                    a = textcolorutils.postprocess(a, color_conversion, channels_first)
+                    # Apply analysis postprocessing, e.g., creating a heatmap.
+                    a = methods[aidx][2](a)
             else:
                 a = np.zeros_like(images)
             # Store the analysis.
@@ -168,11 +183,11 @@ def run_methods(model,
 
         # Add Grad-CAM
         print(' Running Grad-CAM')
-        result, methods = add_grad_cam(result, methods, model, images, exp_no, directory)
+        result, methods = add_grad_cam(result, methods, model, images, exp_no, directory, model_type)
 
         # Add SHAP
         print(' Running SHAP')
-        result, methods = add_shap(result, methods, model, images, labels, x_train, exp_no)
+        result, methods = add_shap(result, methods, model, images, labels, x_train, exp_no, model_type)
         
         # # Add LIME
         # print(' Running LIME')
@@ -218,11 +233,18 @@ def run_methods(model,
 ####      should be followed within these functions, what should be returned in the end.
 
 # Function for adding GradCAM results to the existing results.
-def add_grad_cam(result, methods, model, images, exp_no, directory):
+def add_grad_cam(result, methods, model, images, exp_no, directory, model_type):
     
     # compute attributions
-    model_name = 'w%0.2f.pt'%exp_no
-    c, h, g = grad_cam_run(model, images, os.path.join(directory, model_name), exp_no)
+    if model_type == 0:
+        model_name = 'w%0.2f.pt'%exp_no
+    elif model_type == 1:
+        model_name = 'w_vgg%0.2f.pt'%exp_no
+    elif model_type == 2:
+        model_name = 'w_alex%0.2f.pt'%exp_no
+    else:
+        raise ValueError('model_type not supported')
+    c, h, g = grad_cam_run(model, images, os.path.join(directory, model_name), exp_no, model_type)
     
     # add the new results to the existing results
     added_result = np.expand_dims(h, 1)
@@ -235,10 +257,10 @@ def add_grad_cam(result, methods, model, images, exp_no, directory):
     return result, methods
 
 # Function for adding DeepSHAP results to the existing results.
-def add_shap(result, methods, model, images, labels, x_train, exp_no):
+def add_shap(result, methods, model, images, labels, x_train, exp_no, model_type):
     
     # compute attributions
-    output = shap_run(model, images, labels, x_train, exp_no)
+    output = shap_run(model, images, labels, x_train, exp_no, model_type)
     h, w, c = images[0].shape
     assert(output.shape == (images.shape[0], 1, h, w, c))
     

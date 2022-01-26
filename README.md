@@ -63,12 +63,17 @@ Specific set of images used in our experiment for natural background setting is 
 
 ##### To individually run each model reasoning settings:
 
-```cd scripts; python run_experiments.py --exp {EXP_NO} --bg {BACKGROUND_NATURAL}```
+```cd scripts; python run_experiments.py --exp {EXP_NO} --bg {BACKGROUND_NATURAL} --model_type {MODEL_TYPE} --ep {EPOCH_NO} --lr {LR}```
 
 Replace EXP_NO with the experiment number specific to each model reasoning setting as shown earlier. 
 
 Replace BACKGROUND_NATURAL with either 0 or 1, for black background or natural background respectively (default is black background).
 
+Replace MODEL_TYPE with 0 (default), 1, or 2, each corresponding to simple CNN, VGG16, and AlexNet for the base model.
+
+Replace EPOCH_NO with maximum epoch number for training.
+
+Replace LR with learning rate for training.
 
 ##### To run the entire set of model reasoning settings:
 

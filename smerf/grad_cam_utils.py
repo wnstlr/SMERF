@@ -9,10 +9,12 @@ import tensorflow as tf
 import numpy as np
 import keras
 import cv2
-import os
+import os, gc
 
 from .models import TextBoxCNN as TextBoxCNN
 from .models import TextBoxCNN_adv as TextBoxCNN_adv
+from .models import VGG16_model as VGG16_model
+from .models import AlexNet_model as AlexNet_model
 
 def register_gradient():
     if "GuidedBackProp" not in ops._gradient_registry._registry:
@@ -32,7 +34,7 @@ def compile_saliency_function(model, activation_layer='block5_pool'):
     return K.function([input_img, K.learning_phase()], [saliency])
 
 
-def modify_backprop(model, name, model_file, exp_no):
+def modify_backprop(model, name, model_file, exp_no, model_type):
     g = tf.get_default_graph()
     with g.gradient_override_map({'Relu': name}):
 
@@ -46,12 +48,18 @@ def modify_backprop(model, name, model_file, exp_no):
                 layer.activation = tf.nn.relu
 
         # re-instanciate a new model
-        if exp_no >= 3.5 or exp_no == 1.2:
-            new_model = TextBoxCNN_adv().model
+        if model_type == 0:
+            if exp_no >= 3.5 or exp_no == 1.2:
+                new_model = TextBoxCNN_adv().model
+            else:
+                new_model = TextBoxCNN().model
+        elif model_type == 1:
+            new_model = VGG16_model().model
+        elif model_type == 2:
+            new_model = AlexNet_model().model
         else:
-            new_model = TextBoxCNN().model
+            raise ValueError('model_type must be 0, 1, or 2')
         new_model.load_weights(model_file)
-        #new_model = VGG16(weights='imagenet')
     return new_model
 
 
@@ -119,7 +127,7 @@ def grad_cam(model, x, category_index, layer_name):
     cam = 255 * cam / np.max(cam)
     return np.uint8(cam), heatmap
 
-def grad_cam_run(model, x_sample, model_file, exp_no):
+def grad_cam_run(model, x_sample, model_file, exp_no, model_type):
     last_conv_layer_name = [x for x in model.layers if type(x) == keras.layers.convolutional.Conv2D][-1].name
     cam_imgs = np.zeros(x_sample.shape)
     heat_maps = np.zeros(x_sample.shape)
@@ -132,7 +140,7 @@ def grad_cam_run(model, x_sample, model_file, exp_no):
 
         # guided grad_cam img 
         register_gradient()
-        guided_model = modify_backprop(model, 'GuidedBackProp', model_file, exp_no)
+        guided_model = modify_backprop(model, 'GuidedBackProp', model_file, exp_no, model_type)
         guided_model_name = [x for x in guided_model.layers if type(x) == keras.layers.convolutional.Conv2D][-1].name
         saliency_fn = compile_saliency_function(guided_model, activation_layer=guided_model_name)
         saliency = saliency_fn([img, 0])
@@ -144,4 +152,6 @@ def grad_cam_run(model, x_sample, model_file, exp_no):
         cam_imgs[i] = cam_image
         heat_maps[i] = np.repeat(heat_map[:, :, np.newaxis], 3, axis=2)
         grad_cam_imgs[i] = grad_cam_img[0]
+    del guided_model
+    gc.collect()
     return cam_imgs, heat_maps, grad_cam_imgs
