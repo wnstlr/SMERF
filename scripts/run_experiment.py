@@ -25,12 +25,18 @@ if not os.path.exists(PLOT_DIR):
 
 def main(args):
     exp_no = args.exp # experiment number
+    adv_train = args.adv #whether to train with adversarial examples
     print('EXP_NO = %f'%exp_no)
     lr = args.lr # learning rate used to train the model
     epoch = args.ep # number of maximum epochs to train the model
     random_bg = args.bg # whether to use random background
     model_type = args.model_type # whether to use advanced models
-    if model_type == 0:
+    if adv_train:
+        assert(model_type==-1)
+    if model_type == -1:
+        assert(adv_train)
+        model_name = 'w-adv-%0.2f.pt'%exp_no #adversarially trained model
+    elif model_type == 0:
         model_name = 'w%0.2f.pt'%exp_no # model file to save/load
     elif model_type == 1:
         model_name = 'w_vgg%0.2f.pt'%exp_no 
@@ -208,53 +214,69 @@ def main(args):
     found = False
     prev_test_acc = 0
     
-    for ll in lr_vals:
-        for i in range(20): 
-            if i == 0:
-                retrain = False
-            else:
-                retrain = True
-            if model_type == 0:
-                if exp_no >= 3.5 or exp_no == 1.2:
-                    model_obj = TextBoxCNN_adv(lr=ll, 
-                                            model_name=model_name, 
-                                            max_epoch=epoch, 
-                                            output_dir=CACHE_DIR)
+    if not adv_train:
+        for ll in lr_vals:
+            for i in range(20): 
+                if i == 0:
+                    retrain = False
                 else:
-                    model_obj = TextBoxCNN(lr=ll, 
-                                            model_name=model_name, 
-                                            max_epoch=epoch, 
-                                            output_dir=CACHE_DIR)
-            elif model_type == 1: # vgg
-                model_obj = VGG16_model(lr=ll, model_name=model_name, max_epoch=epoch, output_dir=CACHE_DIR)
-            elif model_type == 2: # alexnet
-                model_obj = AlexNet_model(lr=ll, model_name=model_name, max_epoch=epoch, output_dir=CACHE_DIR)
-            else:
-                raise ValueError('model_type %d not defined'%model_type)
-            
-            model_obj.train(x_train, y_train, retrain=retrain, earlystop=True)
-            train_acc = model_obj.test(x_train, y_train) 
-            test_acc = model_obj.test(x_test, y_test) 
-            model = model_obj.model
-            
-            if train_acc >= thr and test_acc >= thr: # train until high accuracy
-                found = True
+                    retrain = True
+
+                if model_type == 0:
+                    if exp_no >= 3.5 or exp_no == 1.2:
+                        model_obj = TextBoxCNN_adv(lr=ll, 
+                                                model_name=model_name, 
+                                                max_epoch=epoch, 
+                                                output_dir=CACHE_DIR)
+                    else:
+                        model_obj = TextBoxCNN(lr=ll, 
+                                                model_name=model_name, 
+                                                max_epoch=epoch, 
+                                                output_dir=CACHE_DIR)
+                elif model_type == 1: # vgg
+                    model_obj = VGG16_model(lr=ll, model_name=model_name, max_epoch=epoch, output_dir=CACHE_DIR)
+                elif model_type == 2: # alexnet
+                    model_obj = AlexNet_model(lr=ll, model_name=model_name, max_epoch=epoch, output_dir=CACHE_DIR)
+                else:
+                    raise ValueError('model_type %d not defined'%model_type)
+                
+                model_obj.train(x_train, y_train, retrain=retrain, earlystop=True, adversarial=adv_train)
+                train_acc = model_obj.test(x_train, y_train) 
+                test_acc = model_obj.test(x_test, y_test) 
+                model = model_obj.model
+                
+                if train_acc >= thr and test_acc >= thr: # train until high accuracy
+                    found = True
+                    break
+                else:
+                    if test_acc > prev_test_acc:
+                        model.save_weights(os.path.join(CACHE_DIR, 'w%0.2f.pt'%exp_no))
+                        prev_test_acc = test_acc
+                print('-- Retraining due to low performance')
+                print('-- Best so far: [%0.4f]'%prev_test_acc)
+            if found:
                 break
+        if not found:
+            print('==> Failed to train a model that passes the threshold accuracy [%0.4f]'%thr)
+            if prev_test_acc > 1:
+                model.load_weights(os.path.join(CACHE_DIR, 'w%0.2f.pt'%exp_no))
+                print('==> Loading and proceeding with a model with suboptimal accuracy [%0.4f]'%prev_test_acc)
             else:
-                if test_acc > prev_test_acc:
-                    model.save_weights(os.path.join(CACHE_DIR, 'w%0.2f.pt'%exp_no))
-                    prev_test_acc = test_acc
-            print('-- Retraining due to low performance')
-            print('-- Best so far: [%0.4f]'%prev_test_acc)
-        if found:
-            break
-    if not found:
-        print('==> Failed to train a model that passes the threshold accuracy [%0.4f]'%thr)
-        if prev_test_acc > 1:
-            model.load_weights(os.path.join(CACHE_DIR, 'w%0.2f.pt'%exp_no))
-            print('==> Loading and proceeding with a model with suboptimal accuracy [%0.4f]'%prev_test_acc)
+                raise ValueError('*** Aborting from training issues ***')
+    else:
+        # just load from pre-trained data for adversarially robust model (need to run the adv_train.py script first)
+        if exp_no >= 3.5 or exp_no == 1.2:
+            model_obj = TextBoxCNN_adv(lr=0.001, 
+                                    model_name=model_name, 
+                                    max_epoch=epoch, 
+                                    output_dir=CACHE_DIR)
         else:
-            raise ValueError('*** Aborting from training issues ***')
+            model_obj = TextBoxCNN(lr=0.001, 
+                                    model_name=model_name, 
+                                    max_epoch=epoch, 
+                                    output_dir=CACHE_DIR)
+        model_obj.train(x_train, y_train, retrain=False, adversarial=True)
+        model = model_obj.model
 
     ### Run saliency methods
     print('Running Saliency Methods...')
@@ -432,6 +454,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--bg', type=int, default=0, help='set this to 1 for natural background, 0 for zero background')
     parser.add_argument('--model_type', type=int, default=0, help='set this to 0 for simple CNN, 1 for vgg16, 2 for AlexNet for the base model')
+    parser.add_argument('--adv', type=int, default=0, help='set this to 0 for standard model training, 1 adversarial training')
     args = parser.parse_args()
     print(args)
     main(args)

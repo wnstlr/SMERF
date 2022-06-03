@@ -1,10 +1,10 @@
 # SMERF (**S**imulated **M**od**E**l **R**easoning Evaluation **F**ramework) for Saliency Methods
 
-This repository contains code release for SMERF, a ground-truth-based evaluation framework for saliency methods.
+This repository contains the supporting code for the paper [Sanity Simulations for Saliency Methods](https://arxiv.org/abs/2105.06506), introducing SMERF, a ground-truth-based evaluation framework for saliency methods. 
 
 ## Requirements
 
-The repository was developed and tested with Python 3.6.10. Other requirements can be installed via running ```pip install -r requirements.txt```. 
+The repository was mainly developed with `python==3.6.10, keras==2.2.4, tensorflow==1.12.0`. Other requirements can be installed via running ```pip install -r requirements.txt```. 
 
 Core components among these requirements are packages used to run the saliency methods. Refer to these repositories for further instructions on how they are installed and used. 
 * [iNNvestigate](https://github.com/albermax/innvestigate)
@@ -69,7 +69,7 @@ Replace EXP_NO with the experiment number specific to each model reasoning setti
 
 Replace BACKGROUND_NATURAL with either 0 or 1, for black background or natural background respectively (default is black background).
 
-Replace MODEL_TYPE with 0 (default), 1, or 2, each corresponding to simple CNN, VGG16, and AlexNet for the base model.
+Replace MODEL_TYPE with either -1, 0 (default), 1, or 2, each corresponding to adversarially robust simple CNN, plain simple CNN, plain VGG16, and plain AlexNet for the base model.
 
 Replace EPOCH_NO with maximum epoch number for training.
 
@@ -90,6 +90,7 @@ After the script files are run and the metric values are all computed, the plots
 
 - `IOU_AFL_MAFL_plots.ipynb`: plots for the IOU, AFL, and MAFL metrics.
 - `IOU-AFL-architecture-plots.ipynb`: plots for the IOU, AFL for different architectures.
+- `IOU-AFL_plots_adv.ipynb`: plots for the IOU, AFL for adversarially robust models.
 - `comparison-backgrounds.ipynb`: plots comparing cases with different background (black vs real)
 - `failures.ipynb`: plots for bucket-wise detials on failure cases (i.e low metric values)
 - `id_test.ipynb`: side-by-side comparison of feature attributions obtained from different model reasoning on the same input.

@@ -17,7 +17,7 @@ def shap_run(model, x_sample, y_sample, x_train, exp_no, model_type):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         # redefine the model
-        if model_type == 0:
+        if model_type == 0 or model_type ==-1: # adversarial model
             if exp_no >= 3.5 or exp_no==1.2:
                 model_obj = TextBoxCNN_adv(lr=0.0001, max_epoch=10)
             else:

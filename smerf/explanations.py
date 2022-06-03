@@ -142,7 +142,7 @@ def run_methods(model,
                     # Do not analyze, but keep not preprocessed input.
                     a = images
             elif analyzer:
-                if model_type != 0: # NOTE for fine-tuned model, deep lift does not support maxpooling2d
+                if model_type == 1 or model_type ==2: # NOTE for fine-tuned model, deep lift does not support maxpooling2d
                     if 'deep_lift' not in methods[aidx][0]:
                         # Analyze.
                         a = analyzer.analyze(images)
@@ -236,7 +236,9 @@ def run_methods(model,
 def add_grad_cam(result, methods, model, images, exp_no, directory, model_type):
     
     # compute attributions
-    if model_type == 0:
+    if model_type == -1: # adversarial
+        model_name = 'w-adv-%0.2f.pt'%exp_no
+    elif model_type == 0:
         model_name = 'w%0.2f.pt'%exp_no
     elif model_type == 1:
         model_name = 'w_vgg%0.2f.pt'%exp_no

@@ -61,25 +61,31 @@ class TextBoxCNN:
         self.max_epoch = max_epoch
         self.model.compile(optimizer=self.opt, loss='binary_crossentropy', metrics=['accuracy'])
         self.modelfile = os.path.join(output_dir, model_name)
-
-    def train(self, x_train, y_train, retrain=False, validate=False, earlystop=False, verbose=True):
-        if earlystop:
-            #cb = [EarlyStopping(monitor='accuracy', mode='min', verbose=1)]
-            #cb = [EarlyStopping(monitor='loss', patience=1, mode='min'), ModelCheckpoint(self.modelfile, monitor='loss', mode='min', save_best_only=True)]
-            cb = [EarlyStoppingByLossVal(monitor='loss', value=0.005)]
-        else:
-            cb = []
-        if os.path.exists(self.modelfile) and not retrain:
-            self.model.load_weights(self.modelfile)
-        elif not os.path.exists(self.modelfile) and retrain:
-            raise ValueError('modelfile not found')
-        else:
-            y_train_oh = to_categorical(y_train, 2)
-            if validate:
-                self.model.fit(x_train, y_train_oh, batch_size=self.batch, epochs=self.max_epoch, validation_split=0.1, shuffle=True, callbacks=cb)
+        
+    def train(self, x_train, y_train, retrain=False, validate=False, earlystop=False, verbose=True, adversarial=False):
+        if not adversarial:
+            if earlystop:
+                #cb = [EarlyStopping(monitor='accuracy', mode='min', verbose=1)]
+                #cb = [EarlyStopping(monitor='loss', patience=1, mode='min'), ModelCheckpoint(self.modelfile, monitor='loss', mode='min', save_best_only=True)]
+                cb = [EarlyStoppingByLossVal(monitor='loss', value=0.005)]
             else:
-                self.model.fit(x_train, y_train_oh, batch_size=self.batch, epochs=self.max_epoch, validation_split=0, shuffle=True, callbacks=cb)
-            self.model.save_weights(self.modelfile)
+                cb = []
+            if os.path.exists(self.modelfile) and not retrain:
+                self.model.load_weights(self.modelfile)
+            elif not os.path.exists(self.modelfile) and retrain:
+                raise ValueError('modelfile not found')
+            else:
+                y_train_oh = to_categorical(y_train, 2)
+                if validate:
+                    self.model.fit(x_train, y_train_oh, batch_size=self.batch, epochs=self.max_epoch, validation_split=0.1, shuffle=True, callbacks=cb)
+                else:
+                    self.model.fit(x_train, y_train_oh, batch_size=self.batch, epochs=self.max_epoch, validation_split=0, shuffle=True, callbacks=cb)
+                self.model.save_weights(self.modelfile)
+        else:
+            # add adversarial training: load from pretrained
+            if not os.path.exists(self.modelfile):
+                raise ValueError('modelfile %s not found. Make sure to run script/adv_train.py to train the model first.'%self.modelfile)
+            self.model.load_weights(self.modelfile)
         if verbose:
             print(self.model.summary())
 

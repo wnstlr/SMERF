@@ -48,7 +48,7 @@ def modify_backprop(model, name, model_file, exp_no, model_type):
                 layer.activation = tf.nn.relu
 
         # re-instanciate a new model
-        if model_type == 0:
+        if model_type == 0 or model_type == -1: # adversarial model
             if exp_no >= 3.5 or exp_no == 1.2:
                 new_model = TextBoxCNN_adv().model
             else:
